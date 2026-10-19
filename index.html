@@ -1,22 +1,96 @@
-<!DOCTYPE html>
+       <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Inventory Core</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
-        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; font-size: 22px; text-align: center; }
-        p { color: #7f8c8d; text-align: center; font-size: 14px; }
-        .btn { display: block; width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Inventory Core</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h1, h2 { color: #2c3e50; text-align: center; }
+    .btn { width: 100%; padding: 14px; background-color: #2ecc71; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+    .btn:hover { background-color: #27ae60; }
+    .btn-secondary { background-color: #3498db; }
+    .btn-secondary:hover { background-color: #2980b9; }
+    .hidden { display: none; }
+    .card { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #2ecc71; }
+    input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📦 Smart Inventory Core</h1>
-        <p>Sistema inteligente de gestión de inventarios y ventas para negocios.</p>
-        <button class="btn" onclick="alert('¡Bienvenido a Smart Inventory Core!')">Iniciar Sistema</button>
+
+  <div class="container">
+    <!-- PANTALLA DE INICIO -->
+    <div id="welcome-screen">
+      <h1>📦 Smart Inventory Core</h1>
+      <p style="text-align: center; color: #7f8c8d;">Sistema inteligente de gestión de inventarios y ventas.</p>
+      <button class="btn" onclick="iniciarSistema()">Iniciar Sistema</button>
     </div>
+
+    <!-- PANTALLA PRINCIPAL DEL INVENTARIO -->
+    <div id="main-screen" class="hidden">
+      <h2>📋 Panel de Control</h2>
+      
+      <div style="margin-bottom: 20px;">
+        <h3>Agregar Nuevo Producto</h3>
+        <input type="text" id="prod-name" placeholder="Nombre del producto">
+        <input type="number" id="prod-price" placeholder="Precio ($)">
+        <input type="number" id="prod-stock" placeholder="Cantidad en stock">
+        <button class="btn" onclick="agregarProducto()">+ Agregar Producto</button>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+      <h3>Inventario Actual</h3>
+      <div id="inventory-list">
+        <p style="text-align: center; color: #95a5a6;">No hay productos registrados aún.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let productos = [];
+
+    function iniciarSistema() {
+      alert("¡Bienvenido a Smart Inventory Core!");
+      document.getElementById("welcome-screen").classList.add("hidden");
+      document.getElementById("main-screen").classList.remove("hidden");
+    }
+
+    function agregarProducto() {
+      const nombre = document.getElementById("prod-name").value;
+      const precio = document.getElementById("prod-price").value;
+      const stock = document.getElementById("prod-stock").value;
+
+      if (!nombre || !precio || !stock) {
+        alert("Por favor completa todos los campos.");
+        return;
+      }
+
+      productos.push({ nombre, precio, stock });
+
+      document.getElementById("prod-name").value = "";
+      document.getElementById("prod-price").value = "";
+      document.getElementById("prod-stock").value = "";
+
+      renderizarInventario();
+    }
+
+    function renderizarInventario() {
+      const lista = document.getElementById("inventory-list");
+      lista.innerHTML = "";
+
+      productos.forEach((item, index) => {
+        lista.innerHTML += `
+          <div class="card">
+            <strong>${item.nombre}</strong><br>
+            <span>Precio: $${item.precio} | Cantidad: ${item.stock} unidades</span>
+          </div>
+        `;
+      });
+    }
+  </script>
+
 </body>
 </html>
