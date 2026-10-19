@@ -1,9 +1,9 @@
-       <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Inventory Core - Marketplace</title>
+  <title>Smart Core Marketplace</title>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
@@ -11,29 +11,45 @@
     h1, h2, h3 { color: #2c3e50; text-align: center; }
     .btn { width: 100%; padding: 14px; background-color: #2ecc71; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
     .btn:hover { background-color: #27ae60; }
-    .btn-buy { background-color: #e67e22; }
-    .btn-buy:hover { background-color: #d35400; }
+    .btn-pay { background-color: #1a73e8; }
+    .btn-pay:hover { background-color: #1557b0; }
     .btn-secondary { background-color: #3498db; }
     .btn-secondary:hover { background-color: #2980b9; }
     .hidden { display: none; }
-    .card { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 12px; border-left: 5px solid #2ecc71; position: relative; }
-    .card-buyer { border-left-color: #e67e22; }
+    .card { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 12px; border-left: 5px solid #2ecc71; }
+    .card-buyer { border-left-color: #1a73e8; }
+    .card-order { border-left-color: #e67e22; background: #fffdf9; }
     input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
     .badge { display: inline-block; padding: 4px 8px; background: #eee; border-radius: 6px; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 8px; }
     .top-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+    .balance-box { background: #eef9f1; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #2ecc71; text-align: center; }
   </style>
 </head>
 <body>
 
   <div class="container">
 
-    <!-- 1. PANTALLA DE REGISTRO / SELECCIÓN DE ROL -->
+    <!-- 1. REGISTRO DE USUARIO -->
     <div id="auth-screen">
       <h1>📦 Smart Core</h1>
-      <p style="text-align: center; color: #7f8c8d;">Selecciona tu perfil para ingresar al sistema</p>
+      <p style="text-align: center; color: #7f8c8d;">Marketplace Internacional por Países</p>
       
-      <label><b>Tu Nombre:</b></label>
+      <label><b>Tu Nombre Completo:</b></label>
       <input type="text" id="user-name" placeholder="Ej. Alan Walker">
+
+      <label><b>Selecciona tu País:</b></label>
+      <select id="user-country">
+        <option value="Nicaragua">🇳🇮 Nicaragua</option>
+        <option value="Costa Rica">🇨🇷 Costa Rica</option>
+        <option value="Honduras">🇭🇳 Honduras</option>
+        <option value="El Salvador">🇸🇻 El Salvador</option>
+        <option value="Guatemala">🇬🇹 Guatemala</option>
+        <option value="México">🇲🇽 México</option>
+        <option value="Otro">🌎 Otro País</option>
+      </select>
+
+      <label><b>Método de Cobro (Airtm, PayPal, Banco, Zelle):</b></label>
+      <input type="text" id="user-pago" placeholder="Ej. mi.correo@airtm.com, PayPal o IBAN">
 
       <label><b>¿Cómo deseas ingresar?</b></label>
       <select id="user-role">
@@ -47,66 +63,105 @@
     <!-- 2. PANTALLA DE VENDEDOR -->
     <div id="seller-screen" class="hidden">
       <div class="top-bar">
-        <span>👤 Vendedor: <b id="seller-name-display"></b></span>
+        <span>👤 Vendedor: <b id="seller-name-display"></b> (<span id="seller-country-display"></span>)</span>
         <button class="btn btn-secondary" style="width: auto; padding: 6px 12px; margin:0;" onclick="cerrarSesion()">Salir</button>
+      </div>
+
+      <div class="balance-box">
+        <small>Mi Saldo Acumulado por Ventas:</small><br>
+        <strong style="font-size: 22px; color: #27ae60;">$<span id="seller-balance">0.00</span> USD</strong><br>
+        <small style="color: #555;">Método registrado: <b id="seller-pago-display"></b></small>
       </div>
 
       <h2>📋 Panel de Vendedor</h2>
       
-      <div style="background: #eef9f1; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+      <div style="background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #eee;">
         <h3>Agregar Producto a la Venta</h3>
-        <input type="text" id="prod-name" placeholder="Nombre del producto">
-        <input type="number" id="prod-price" placeholder="Precio ($)">
+        <input type="text" id="prod-name" placeholder="Nombre del producto (Ej. Papas)">
+        <input type="number" id="prod-price" placeholder="Precio ($) (Ej. 15)">
         <input type="number" id="prod-stock" placeholder="Cantidad en stock">
         <button class="btn" onclick="agregarProducto()">+ Publicar Producto</button>
       </div>
 
-      <h3>Mis Productos Publicados</h3>
+      <h3>📦 Ventas Realizadas (Pedidos por Entregar)</h3>
+      <div id="seller-orders-list"></div>
+
+      <h3>🏷️ Mis Productos Publicados</h3>
       <div id="seller-inventory-list"></div>
     </div>
 
     <!-- 3. PANTALLA DE COMPRADOR -->
     <div id="buyer-screen" class="hidden">
       <div class="top-bar">
-        <span>👤 Comprador: <b id="buyer-name-display"></b></span>
+        <span>👤 Comprador: <b id="buyer-name-display"></b> (<span id="buyer-country-display"></span>)</span>
         <button class="btn btn-secondary" style="width: auto; padding: 6px 12px; margin:0;" onclick="cerrarSesion()">Salir</button>
       </div>
 
       <h2>🛍️ Catálogo de Productos</h2>
-      <p style="text-align: center; color: #7f8c8d;">Explora y compra productos en línea</p>
+      <p style="text-align: center; color: #7f8c8d;">Mostrando vendedores en tu país</p>
 
       <div id="buyer-catalog-list"></div>
+    </div>
+
+    <!-- 4. PANTALLA DE DATOS DE ENVÍO (POST-PAGO) -->
+    <div id="shipping-screen" class="hidden">
+      <h2>🚚 Datos para la Entrega</h2>
+      <p style="text-align: center; color: #7f8c8d;">¡Pago recibido! Completa tus datos para que el vendedor envíe tu producto.</p>
+
+      <div style="background: #f9f9f9; padding: 15px; border-radius: 10px; border: 1px solid #eee;">
+        <label><b>Dirección Exacta de Envío:</b></label>
+        <input type="text" id="ship-address" placeholder="Ej. Calle Principal, Casa #45, Managua">
+
+        <label><b>Número de WhatsApp / Contacto:</b></label>
+        <input type="text" id="ship-phone" placeholder="Ej. +505 8888-8888">
+
+        <button class="btn" onclick="guardarDatosEnvio()">Enviar Datos de Entrega al Vendedor</button>
+      </div>
     </div>
 
   </div>
 
   <script>
-    // Datos simulados en memoria
-    let productos = [
-      { id: 1, nombre: "Papas Fritas", precio: 20, stock: 10, vendedor: "Tienda Central" }
-    ];
+    // CONFIGURACIÓN CENTRAL DEL MARKETPLACE
+    const CORREO_AIRTM_PLATAFORMA = "frober897@gmail.com"; // Tu correo oficial de Airtm para comisiones
+    const COMISION_FIJA = 2.00; // $2 USD de comisión fija por venta
+
+    let productos = [];
+    let ventasRealizadas = [];
+    let saldosVendedores = {};
 
     let usuarioActual = null;
+    let productoEnProceso = null;
 
     function iniciarSesion() {
       const nombre = document.getElementById("user-name").value;
+      const pais = document.getElementById("user-country").value;
+      const metodoPago = document.getElementById("user-pago").value;
       const rol = document.getElementById("user-role").value;
 
       if (!nombre) {
-        alert("Por favor ingresa tu nombre.");
+        alert("Por favor ingresa tu nombre completo.");
         return;
       }
 
-      usuarioActual = { nombre, rol };
+      usuarioActual = { nombre, pais, metodoPago: metodoPago || "Airtm/Banco", rol };
+
+      if (!saldosVendedores[nombre]) {
+        saldosVendedores[nombre] = 0.00;
+      }
 
       document.getElementById("auth-screen").classList.add("hidden");
 
       if (rol === "vendedor") {
         document.getElementById("seller-name-display").innerText = nombre;
+        document.getElementById("seller-country-display").innerText = pais;
+        document.getElementById("seller-pago-display").innerText = usuarioActual.metodoPago;
+        document.getElementById("seller-balance").innerText = saldosVendedores[nombre].toFixed(2);
         document.getElementById("seller-screen").classList.remove("hidden");
         renderizarVendedor();
       } else {
         document.getElementById("buyer-name-display").innerText = nombre;
+        document.getElementById("buyer-country-display").innerText = pais;
         document.getElementById("buyer-screen").classList.remove("hidden");
         renderizarComprador();
       }
@@ -115,6 +170,7 @@
     function cerrarSesion() {
       document.getElementById("seller-screen").classList.add("hidden");
       document.getElementById("buyer-screen").classList.add("hidden");
+      document.getElementById("shipping-screen").classList.add("hidden");
       document.getElementById("auth-screen").classList.remove("hidden");
     }
 
@@ -133,7 +189,9 @@
         nombre,
         precio,
         stock,
-        vendedor: usuarioActual.nombre
+        vendedor: usuarioActual.nombre,
+        pais: usuarioActual.pais,
+        metodoPagoVendedor: usuarioActual.metodoPago
       });
 
       document.getElementById("prod-name").value = "";
@@ -143,29 +201,108 @@
       renderizarVendedor();
     }
 
-    function comprarProducto(id) {
+    function procesarUnicoPago(id) {
       const prod = productos.find(p => p.id === id);
       if (!prod || prod.stock <= 0) {
-        alert("Producto agotado.");
+        alert("Producto no disponible.");
         return;
       }
 
-      // Cálculo de comisión ($2 por cada $20 o 10%)
-      const comision = (prod.precio * 0.10).toFixed(2);
-      const pagoVendedor = (prod.precio - comision).toFixed(2);
+      const pagoVendedor = prod.precio - COMISION_FIJA;
 
-      prod.stock--;
+      if (pagoVendedor < 0) {
+        alert("El precio del producto debe ser mayor a la comisión de $2.");
+        return;
+      }
 
-      alert(`¡Compra realizada con éxito!\n\n💰 Precio: $${prod.precio}\n📊 Desglose de Pago:\n - Vendedor recibe: $${pagoVendedor}\n - Comisión Plataforma: $${comision}`);
+      const mensaje = `
+💳 PAGO ÚNICO DE COMPRA 💳
+
+Producto: ${prod.nombre}
+Monto Total a Pagar: $${prod.precio} USD
+País de Entrega: ${prod.pais}
+
+Comisión de la app ($2 USD) destinada a: ${CORREO_AIRTM_PLATAFORMA}
+
+¿Confirmar el pago de $${prod.precio} USD?`;
+
+      if (confirm(mensaje)) {
+        prod.stock--;
+
+        // Se abona la ganancia libre al vendedor
+        if (!saldosVendedores[prod.vendedor]) saldosVendedores[prod.vendedor] = 0;
+        saldosVendedores[prod.vendedor] += pagoVendedor;
+
+        // Guardar referencia para solicitar datos de envío
+        productoEnProceso = { ...prod, pagoVendedor };
+
+        // Cambiar a la pantalla de datos de envío
+        document.getElementById("buyer-screen").classList.add("hidden");
+        document.getElementById("shipping-screen").classList.remove("hidden");
+      }
+    }
+
+    function guardarDatosEnvio() {
+      const direccion = document.getElementById("ship-address").value;
+      const telefono = document.getElementById("ship-phone").value;
+
+      if (!direccion || !telefono) {
+        alert("Por favor ingresa la dirección y teléfono para la entrega.");
+        return;
+      }
+
+      ventasRealizadas.push({
+        idVenta: Date.now(),
+        producto: productoEnProceso.nombre,
+        precioTotal: productoEnProceso.precio,
+        pagoVendedor: productoEnProceso.pagoVendedor,
+        vendedor: productoEnProceso.vendedor,
+        metodoPagoVendedor: productoEnProceso.metodoPagoVendedor,
+        comprador: usuarioActual.nombre,
+        pais: usuarioActual.pais,
+        direccion,
+        telefono
+      });
+
+      alert("¡Datos de envío recibidos con éxito! El vendedor ha sido notificado de tu pedido.");
+
+      document.getElementById("ship-address").value = "";
+      document.getElementById("ship-phone").value = "";
+
+      document.getElementById("shipping-screen").classList.add("hidden");
+      document.getElementById("buyer-screen").classList.remove("hidden");
 
       renderizarComprador();
     }
 
     function renderizarVendedor() {
       const lista = document.getElementById("seller-inventory-list");
-      lista.innerHTML = "";
+      const listaVentas = document.getElementById("seller-orders-list");
 
-      const misProductos = productos.filter(p => p.vendedor === usuarioActual.nombre || p.vendedor === "Tienda Central");
+      lista.innerHTML = "";
+      listaVentas.innerHTML = "";
+
+      // Renderizar Ventas Pendientes de Entrega
+      const misVentas = ventasRealizadas.filter(v => v.vendedor === usuarioActual.nombre);
+      if (misVentas.length === 0) {
+        listaVentas.innerHTML = "<p style='text-align:center; color:#999;'>No tienes ventas registradas aún.</p>";
+      } else {
+        misVentas.forEach(v => {
+          listaVentas.innerHTML += `
+            <div class="card card-order">
+              <span class="badge">Venta de: ${v.producto}</span><br>
+              <strong>Comprador: ${v.comprador}</strong> (${v.pais})<br>
+              <span>Pago a recibir: <b style="color:#27ae60;">$${v.pagoVendedor.toFixed(2)} USD</b></span><br>
+              <small>💳 Enviar a tu cuenta: <b>${v.metodoPagoVendedor}</b></small><br>
+              <small>📍 Dirección: ${v.direccion}</small><br>
+              <small>📱 WhatsApp: <b>${v.telefono}</b></small>
+            </div>
+          `;
+        });
+      }
+
+      // Renderizar Productos Publicados
+      const misProductos = productos.filter(p => p.vendedor === usuarioActual.nombre);
 
       if (misProductos.length === 0) {
         lista.innerHTML = "<p style='text-align:center; color:#999;'>No has publicado productos aún.</p>";
@@ -173,15 +310,14 @@
       }
 
       misProductos.forEach(item => {
-        const comisionEst = (item.precio * 0.10).toFixed(2);
-        const gananciaEst = (item.precio - comisionEst).toFixed(2);
+        const gananciaVendedor = (item.precio - COMISION_FIJA).toFixed(2);
 
         lista.innerHTML += `
           <div class="card">
-            <span class="badge">Vendedor: ${item.vendedor}</span><br>
+            <span class="badge">País: ${item.pais}</span><br>
             <strong>${item.nombre}</strong><br>
-            <span>Precio: <b>$${item.precio}</b> | Stock: <b>${item.stock}</b> unidades</span><br>
-            <small style="color:#27ae60;">(Ganancia estimada: $${gananciaEst} | Comisión App: $${comisionEst})</small>
+            <span>Precio: <b>$${item.precio} USD</b> | Stock: <b>${item.stock}</b></span><br>
+            <small style="color:#27ae60;">(Ganancia libre: $${gananciaVendedor} | Comisión App retenida: $${COMISION_FIJA}.00)</small>
           </div>
         `;
       });
@@ -191,20 +327,24 @@
       const lista = document.getElementById("buyer-catalog-list");
       lista.innerHTML = "";
 
-      if (productos.length === 0) {
-        lista.innerHTML = "<p style='text-align:center; color:#999;'>No hay productos disponibles.</p>";
+      // Filtrar productos por el país del comprador
+      const productosDelPais = productos.filter(p => p.pais === usuarioActual.pais);
+
+      if (productosDelPais.length === 0) {
+        lista.innerHTML = `<p style='text-align:center; color:#999;'>No hay productos disponibles para ${usuarioActual.pais} en este momento.</p>`;
         return;
       }
 
-      productos.forEach(item => {
+      productosDelPais.forEach(item => {
         lista.innerHTML += `
           <div class="card card-buyer">
-            <span class="badge">Vendedor: ${item.vendedor}</span><br>
+            <span class="badge">Vendedor: ${item.vendedor} (${item.pais})</span><br>
             <strong style="font-size: 18px;">${item.nombre}</strong><br>
-            <span style="font-size: 16px; color:#e67e22; font-weight:bold;">$${item.precio}</span><br>
+            <span style="font-size: 16px; color:#1a73e8; font-weight:bold;">Precio: $${item.precio} USD</span><br>
             <small>Disponible: ${item.stock} unidades</small><br>
-            <button class="btn btn-buy" onclick="comprarProducto(${item.id})" ${item.stock <= 0 ? 'disabled' : ''}>
-              ${item.stock > 0 ? '🛒 Comprar Ahora' : 'Agotado'}
+            
+            <button class="btn btn-pay" onclick="procesarUnicoPago(${item.id})" ${item.stock <= 0 ? 'disabled' : ''}>
+              ${item.stock > 0 ? '💳 Pagar $ ' + item.precio + ' USD' : 'Agotado'}
             </button>
           </div>
         `;
