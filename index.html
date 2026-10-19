@@ -3,89 +3,209 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Inventory Core</title>
+  <title>Smart Inventory Core - Marketplace</title>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
     .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-    h1, h2 { color: #2c3e50; text-align: center; }
+    h1, h2, h3 { color: #2c3e50; text-align: center; }
     .btn { width: 100%; padding: 14px; background-color: #2ecc71; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
     .btn:hover { background-color: #27ae60; }
+    .btn-buy { background-color: #e67e22; }
+    .btn-buy:hover { background-color: #d35400; }
     .btn-secondary { background-color: #3498db; }
     .btn-secondary:hover { background-color: #2980b9; }
     .hidden { display: none; }
-    .card { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #2ecc71; }
-    input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; }
+    .card { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 12px; border-left: 5px solid #2ecc71; position: relative; }
+    .card-buyer { border-left-color: #e67e22; }
+    input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
+    .badge { display: inline-block; padding: 4px 8px; background: #eee; border-radius: 6px; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 8px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <!-- PANTALLA DE INICIO -->
-    <div id="welcome-screen">
-      <h1>📦 Smart Inventory Core</h1>
-      <p style="text-align: center; color: #7f8c8d;">Sistema inteligente de gestión de inventarios y ventas.</p>
-      <button class="btn" onclick="iniciarSistema()">Iniciar Sistema</button>
+
+    <!-- 1. PANTALLA DE REGISTRO / SELECCIÓN DE ROL -->
+    <div id="auth-screen">
+      <h1>📦 Smart Core</h1>
+      <p style="text-align: center; color: #7f8c8d;">Selecciona tu perfil para ingresar al sistema</p>
+      
+      <label><b>Tu Nombre:</b></label>
+      <input type="text" id="user-name" placeholder="Ej. Alan Walker">
+
+      <label><b>¿Cómo deseas ingresar?</b></label>
+      <select id="user-role">
+        <option value="comprador">🛍️ Quiero Comprar (Comprador)</option>
+        <option value="vendedor">🏷️ Quiero Vender (Vendedor)</option>
+      </select>
+
+      <button class="btn" onclick="iniciarSesion()">Ingresar al Marketplace</button>
     </div>
 
-    <!-- PANTALLA PRINCIPAL DEL INVENTARIO -->
-    <div id="main-screen" class="hidden">
-      <h2>📋 Panel de Control</h2>
+    <!-- 2. PANTALLA DE VENDEDOR -->
+    <div id="seller-screen" class="hidden">
+      <div class="top-bar">
+        <span>👤 Vendedor: <b id="seller-name-display"></b></span>
+        <button class="btn btn-secondary" style="width: auto; padding: 6px 12px; margin:0;" onclick="cerrarSesion()">Salir</button>
+      </div>
+
+      <h2>📋 Panel de Vendedor</h2>
       
-      <div style="margin-bottom: 20px;">
-        <h3>Agregar Nuevo Producto</h3>
+      <div style="background: #eef9f1; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+        <h3>Agregar Producto a la Venta</h3>
         <input type="text" id="prod-name" placeholder="Nombre del producto">
         <input type="number" id="prod-price" placeholder="Precio ($)">
         <input type="number" id="prod-stock" placeholder="Cantidad en stock">
-        <button class="btn" onclick="agregarProducto()">+ Agregar Producto</button>
+        <button class="btn" onclick="agregarProducto()">+ Publicar Producto</button>
       </div>
 
-      <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-
-      <h3>Inventario Actual</h3>
-      <div id="inventory-list">
-        <p style="text-align: center; color: #95a5a6;">No hay productos registrados aún.</p>
-      </div>
+      <h3>Mis Productos Publicados</h3>
+      <div id="seller-inventory-list"></div>
     </div>
+
+    <!-- 3. PANTALLA DE COMPRADOR -->
+    <div id="buyer-screen" class="hidden">
+      <div class="top-bar">
+        <span>👤 Comprador: <b id="buyer-name-display"></b></span>
+        <button class="btn btn-secondary" style="width: auto; padding: 6px 12px; margin:0;" onclick="cerrarSesion()">Salir</button>
+      </div>
+
+      <h2>🛍️ Catálogo de Productos</h2>
+      <p style="text-align: center; color: #7f8c8d;">Explora y compra productos en línea</p>
+
+      <div id="buyer-catalog-list"></div>
+    </div>
+
   </div>
 
   <script>
-    let productos = [];
+    // Datos simulados en memoria
+    let productos = [
+      { id: 1, nombre: "Papas Fritas", precio: 20, stock: 10, vendedor: "Tienda Central" }
+    ];
 
-    function iniciarSistema() {
-      alert("¡Bienvenido a Smart Inventory Core!");
-      document.getElementById("welcome-screen").classList.add("hidden");
-      document.getElementById("main-screen").classList.remove("hidden");
+    let usuarioActual = null;
+
+    function iniciarSesion() {
+      const nombre = document.getElementById("user-name").value;
+      const rol = document.getElementById("user-role").value;
+
+      if (!nombre) {
+        alert("Por favor ingresa tu nombre.");
+        return;
+      }
+
+      usuarioActual = { nombre, rol };
+
+      document.getElementById("auth-screen").classList.add("hidden");
+
+      if (rol === "vendedor") {
+        document.getElementById("seller-name-display").innerText = nombre;
+        document.getElementById("seller-screen").classList.remove("hidden");
+        renderizarVendedor();
+      } else {
+        document.getElementById("buyer-name-display").innerText = nombre;
+        document.getElementById("buyer-screen").classList.remove("hidden");
+        renderizarComprador();
+      }
+    }
+
+    function cerrarSesion() {
+      document.getElementById("seller-screen").classList.add("hidden");
+      document.getElementById("buyer-screen").classList.add("hidden");
+      document.getElementById("auth-screen").classList.remove("hidden");
     }
 
     function agregarProducto() {
       const nombre = document.getElementById("prod-name").value;
-      const precio = document.getElementById("prod-price").value;
-      const stock = document.getElementById("prod-stock").value;
+      const precio = parseFloat(document.getElementById("prod-price").value);
+      const stock = parseInt(document.getElementById("prod-stock").value);
 
-      if (!nombre || !precio || !stock) {
-        alert("Por favor completa todos los campos.");
+      if (!nombre || isNaN(precio) || isNaN(stock)) {
+        alert("Completa todos los campos correctamente.");
         return;
       }
 
-      productos.push({ nombre, precio, stock });
+      productos.push({
+        id: Date.now(),
+        nombre,
+        precio,
+        stock,
+        vendedor: usuarioActual.nombre
+      });
 
       document.getElementById("prod-name").value = "";
       document.getElementById("prod-price").value = "";
       document.getElementById("prod-stock").value = "";
 
-      renderizarInventario();
+      renderizarVendedor();
     }
 
-    function renderizarInventario() {
-      const lista = document.getElementById("inventory-list");
+    function comprarProducto(id) {
+      const prod = productos.find(p => p.id === id);
+      if (!prod || prod.stock <= 0) {
+        alert("Producto agotado.");
+        return;
+      }
+
+      // Cálculo de comisión ($2 por cada $20 o 10%)
+      const comision = (prod.precio * 0.10).toFixed(2);
+      const pagoVendedor = (prod.precio - comision).toFixed(2);
+
+      prod.stock--;
+
+      alert(`¡Compra realizada con éxito!\n\n💰 Precio: $${prod.precio}\n📊 Desglose de Pago:\n - Vendedor recibe: $${pagoVendedor}\n - Comisión Plataforma: $${comision}`);
+
+      renderizarComprador();
+    }
+
+    function renderizarVendedor() {
+      const lista = document.getElementById("seller-inventory-list");
       lista.innerHTML = "";
 
-      productos.forEach((item, index) => {
+      const misProductos = productos.filter(p => p.vendedor === usuarioActual.nombre || p.vendedor === "Tienda Central");
+
+      if (misProductos.length === 0) {
+        lista.innerHTML = "<p style='text-align:center; color:#999;'>No has publicado productos aún.</p>";
+        return;
+      }
+
+      misProductos.forEach(item => {
+        const comisionEst = (item.precio * 0.10).toFixed(2);
+        const gananciaEst = (item.precio - comisionEst).toFixed(2);
+
         lista.innerHTML += `
           <div class="card">
+            <span class="badge">Vendedor: ${item.vendedor}</span><br>
             <strong>${item.nombre}</strong><br>
-            <span>Precio: $${item.precio} | Cantidad: ${item.stock} unidades</span>
+            <span>Precio: <b>$${item.precio}</b> | Stock: <b>${item.stock}</b> unidades</span><br>
+            <small style="color:#27ae60;">(Ganancia estimada: $${gananciaEst} | Comisión App: $${comisionEst})</small>
+          </div>
+        `;
+      });
+    }
+
+    function renderizarComprador() {
+      const lista = document.getElementById("buyer-catalog-list");
+      lista.innerHTML = "";
+
+      if (productos.length === 0) {
+        lista.innerHTML = "<p style='text-align:center; color:#999;'>No hay productos disponibles.</p>";
+        return;
+      }
+
+      productos.forEach(item => {
+        lista.innerHTML += `
+          <div class="card card-buyer">
+            <span class="badge">Vendedor: ${item.vendedor}</span><br>
+            <strong style="font-size: 18px;">${item.nombre}</strong><br>
+            <span style="font-size: 16px; color:#e67e22; font-weight:bold;">$${item.precio}</span><br>
+            <small>Disponible: ${item.stock} unidades</small><br>
+            <button class="btn btn-buy" onclick="comprarProducto(${item.id})" ${item.stock <= 0 ? 'disabled' : ''}>
+              ${item.stock > 0 ? '🛒 Comprar Ahora' : 'Agotado'}
+            </button>
           </div>
         `;
       });
