@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -23,7 +23,12 @@
     .badge { display: inline-block; padding: 4px 8px; background: #eee; border-radius: 6px; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 8px; }
     .top-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
     .balance-box { background: #eef9f1; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #2ecc71; text-align: center; }
+    .prod-img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; }
   </style>
+
+  <!-- FIREBASE SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -32,7 +37,7 @@
     <!-- 1. REGISTRO DE USUARIO -->
     <div id="auth-screen">
       <h1>📦 Smart Core</h1>
-      <p style="text-align: center; color: #7f8c8d;">Marketplace Internacional por Países</p>
+      <p style="text-align: center; color: #7f8c8d;">Marketplace Conectado en Tiempo Real</p>
       
       <label><b>Tu Nombre Completo:</b></label>
       <input type="text" id="user-name" placeholder="Ej. Alan Walker">
@@ -49,7 +54,7 @@
       </select>
 
       <label><b>Método de Cobro (Airtm, PayPal, Banco, Zelle):</b></label>
-      <input type="text" id="user-pago" placeholder="Ej. mi.correo@airtm.com, PayPal o IBAN">
+      <input type="text" id="user-pago" placeholder="Ej. frober897@gmail.com o IBAN">
 
       <label><b>¿Cómo deseas ingresar?</b></label>
       <select id="user-role">
@@ -77,10 +82,11 @@
       
       <div style="background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #eee;">
         <h3>Agregar Producto a la Venta</h3>
-        <input type="text" id="prod-name" placeholder="Nombre del producto (Ej. Papas)">
+        <input type="text" id="prod-name" placeholder="Nombre del producto">
         <input type="number" id="prod-price" placeholder="Precio ($) (Ej. 15)">
         <input type="number" id="prod-stock" placeholder="Cantidad en stock">
-        <button class="btn" onclick="agregarProducto()">+ Publicar Producto</button>
+        <input type="text" id="prod-img" placeholder="URL de la Foto (Opcional)">
+        <button class="btn" onclick="agregarProducto()">+ Publicar Producto en la Nube</button>
       </div>
 
       <h3>📦 Ventas Realizadas (Pedidos por Entregar)</h3>
@@ -103,10 +109,10 @@
       <div id="buyer-catalog-list"></div>
     </div>
 
-    <!-- 4. PANTALLA DE DATOS DE ENVÍO (POST-PAGO) -->
+    <!-- 4. PANTALLA DE DATOS DE ENVÍO -->
     <div id="shipping-screen" class="hidden">
       <h2>🚚 Datos para la Entrega</h2>
-      <p style="text-align: center; color: #7f8c8d;">¡Pago recibido! Completa tus datos para que el vendedor envíe tu producto.</p>
+      <p style="text-align: center; color: #7f8c8d;">¡Pago recibido! Completa tus datos para notificar al vendedor.</p>
 
       <div style="background: #f9f9f9; padding: 15px; border-radius: 10px; border: 1px solid #eee;">
         <label><b>Dirección Exacta de Envío:</b></label>
@@ -115,23 +121,44 @@
         <label><b>Número de WhatsApp / Contacto:</b></label>
         <input type="text" id="ship-phone" placeholder="Ej. +505 8888-8888">
 
-        <button class="btn" onclick="guardarDatosEnvio()">Enviar Datos de Entrega al Vendedor</button>
+        <button class="btn" onclick="guardarDatosEnvio()">Enviar Datos al Vendedor</button>
       </div>
     </div>
 
   </div>
 
   <script>
-    // CONFIGURACIÓN CENTRAL DEL MARKETPLACE
-    const CORREO_AIRTM_PLATAFORMA = "frober897@gmail.com"; // Tu correo oficial de Airtm para comisiones
-    const COMISION_FIJA = 2.00; // $2 USD de comisión fija por venta
+    // CONFIGURACIÓN DE FIREBASE
+    const firebaseConfig = {
+      apiKey: "AIzaSyBc7Sa3HQDS2XqajqARGoSVzJu8eVNCRZY",
+      authDomain: "smart-22cea.firebaseapp.com",
+      projectId: "smart-22cea",
+      storageBucket: "smart-22cea.firebasestorage.app",
+      messagingSenderId: "588824859786",
+      appId: "1:588824859786:web:ab813d1a0aa78d3db04973",
+      measurementId: "G-88QPX26TN3"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const CORREO_AIRTM_PLATAFORMA = "frober897@gmail.com";
+    const COMISION_FIJA = 2.00;
 
     let productos = [];
     let ventasRealizadas = [];
-    let saldosVendedores = {};
-
     let usuarioActual = null;
     let productoEnProceso = null;
+
+    db.collection("productos").onSnapshot((snapshot) => {
+      productos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      actualizarVistas();
+    });
+
+    db.collection("ventas").onSnapshot((snapshot) => {
+      ventasRealizadas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      actualizarVistas();
+    });
 
     function iniciarSesion() {
       const nombre = document.getElementById("user-name").value;
@@ -146,25 +173,19 @@
 
       usuarioActual = { nombre, pais, metodoPago: metodoPago || "Airtm/Banco", rol };
 
-      if (!saldosVendedores[nombre]) {
-        saldosVendedores[nombre] = 0.00;
-      }
-
       document.getElementById("auth-screen").classList.add("hidden");
 
       if (rol === "vendedor") {
         document.getElementById("seller-name-display").innerText = nombre;
         document.getElementById("seller-country-display").innerText = pais;
         document.getElementById("seller-pago-display").innerText = usuarioActual.metodoPago;
-        document.getElementById("seller-balance").innerText = saldosVendedores[nombre].toFixed(2);
         document.getElementById("seller-screen").classList.remove("hidden");
-        renderizarVendedor();
       } else {
         document.getElementById("buyer-name-display").innerText = nombre;
         document.getElementById("buyer-country-display").innerText = pais;
         document.getElementById("buyer-screen").classList.remove("hidden");
-        renderizarComprador();
       }
+      actualizarVistas();
     }
 
     function cerrarSesion() {
@@ -174,21 +195,22 @@
       document.getElementById("auth-screen").classList.remove("hidden");
     }
 
-    function agregarProducto() {
+    async function agregarProducto() {
       const nombre = document.getElementById("prod-name").value;
       const precio = parseFloat(document.getElementById("prod-price").value);
       const stock = parseInt(document.getElementById("prod-stock").value);
+      const imagen = document.getElementById("prod-img").value || "https://via.placeholder.com/300x180?text=Producto";
 
       if (!nombre || isNaN(precio) || isNaN(stock)) {
         alert("Completa todos los campos correctamente.");
         return;
       }
 
-      productos.push({
-        id: Date.now(),
+      await db.collection("productos").add({
         nombre,
         precio,
         stock,
+        imagen,
         vendedor: usuarioActual.nombre,
         pais: usuarioActual.pais,
         metodoPagoVendedor: usuarioActual.metodoPago
@@ -197,8 +219,9 @@
       document.getElementById("prod-name").value = "";
       document.getElementById("prod-price").value = "";
       document.getElementById("prod-stock").value = "";
+      document.getElementById("prod-img").value = "";
 
-      renderizarVendedor();
+      alert("¡Producto publicado con éxito en la nube!");
     }
 
     function procesarUnicoPago(id) {
@@ -219,30 +242,24 @@
 💳 PAGO ÚNICO DE COMPRA 💳
 
 Producto: ${prod.nombre}
-Monto Total a Pagar: $${prod.precio} USD
-País de Entrega: ${prod.pais}
-
-Comisión de la app ($2 USD) destinada a: ${CORREO_AIRTM_PLATAFORMA}
+Monto Total: $${prod.precio} USD
+Comisión App ($2 USD) a: ${CORREO_AIRTM_PLATAFORMA}
 
 ¿Confirmar el pago de $${prod.precio} USD?`;
 
       if (confirm(mensaje)) {
-        prod.stock--;
+        db.collection("productos").doc(id).update({
+          stock: prod.stock - 1
+        });
 
-        // Se abona la ganancia libre al vendedor
-        if (!saldosVendedores[prod.vendedor]) saldosVendedores[prod.vendedor] = 0;
-        saldosVendedores[prod.vendedor] += pagoVendedor;
-
-        // Guardar referencia para solicitar datos de envío
         productoEnProceso = { ...prod, pagoVendedor };
 
-        // Cambiar a la pantalla de datos de envío
         document.getElementById("buyer-screen").classList.add("hidden");
         document.getElementById("shipping-screen").classList.remove("hidden");
       }
     }
 
-    function guardarDatosEnvio() {
+    async function guardarDatosEnvio() {
       const direccion = document.getElementById("ship-address").value;
       const telefono = document.getElementById("ship-phone").value;
 
@@ -251,8 +268,7 @@ Comisión de la app ($2 USD) destinada a: ${CORREO_AIRTM_PLATAFORMA}
         return;
       }
 
-      ventasRealizadas.push({
-        idVenta: Date.now(),
+      await db.collection("ventas").add({
         producto: productoEnProceso.nombre,
         precioTotal: productoEnProceso.precio,
         pagoVendedor: productoEnProceso.pagoVendedor,
@@ -261,18 +277,27 @@ Comisión de la app ($2 USD) destinada a: ${CORREO_AIRTM_PLATAFORMA}
         comprador: usuarioActual.nombre,
         pais: usuarioActual.pais,
         direccion,
-        telefono
+        telefono,
+        fecha: new Date().toLocaleString()
       });
 
-      alert("¡Datos de envío recibidos con éxito! El vendedor ha sido notificado de tu pedido.");
+      alert("¡Venta registrada en la nube con éxito!");
 
       document.getElementById("ship-address").value = "";
       document.getElementById("ship-phone").value = "";
 
       document.getElementById("shipping-screen").classList.add("hidden");
       document.getElementById("buyer-screen").classList.remove("hidden");
+    }
 
-      renderizarComprador();
+    function actualizarVistas() {
+      if (!usuarioActual) return;
+
+      if (usuarioActual.rol === "vendedor") {
+        renderizarVendedor();
+      } else {
+        renderizarComprador();
+      }
     }
 
     function renderizarVendedor() {
@@ -282,18 +307,19 @@ Comisión de la app ($2 USD) destinada a: ${CORREO_AIRTM_PLATAFORMA}
       lista.innerHTML = "";
       listaVentas.innerHTML = "";
 
-      // Renderizar Ventas Pendientes de Entrega
+      let saldoTotal = 0;
+
       const misVentas = ventasRealizadas.filter(v => v.vendedor === usuarioActual.nombre);
       if (misVentas.length === 0) {
         listaVentas.innerHTML = "<p style='text-align:center; color:#999;'>No tienes ventas registradas aún.</p>";
       } else {
         misVentas.forEach(v => {
+          saldoTotal += v.pagoVendedor;
           listaVentas.innerHTML += `
             <div class="card card-order">
               <span class="badge">Venta de: ${v.producto}</span><br>
               <strong>Comprador: ${v.comprador}</strong> (${v.pais})<br>
               <span>Pago a recibir: <b style="color:#27ae60;">$${v.pagoVendedor.toFixed(2)} USD</b></span><br>
-              <small>💳 Enviar a tu cuenta: <b>${v.metodoPagoVendedor}</b></small><br>
               <small>📍 Dirección: ${v.direccion}</small><br>
               <small>📱 WhatsApp: <b>${v.telefono}</b></small>
             </div>
@@ -301,7 +327,8 @@ Comisión de la app ($2 USD) destinada a: ${CORREO_AIRTM_PLATAFORMA}
         });
       }
 
-      // Renderizar Productos Publicados
+      document.getElementById("seller-balance").innerText = saldoTotal.toFixed(2);
+
       const misProductos = productos.filter(p => p.vendedor === usuarioActual.nombre);
 
       if (misProductos.length === 0) {
@@ -314,6 +341,7 @@ Comisión de la app ($2 USD) destinada a: ${CORREO_AIRTM_PLATAFORMA}
 
         lista.innerHTML += `
           <div class="card">
+            ${item.imagen ? `<img src="${item.imagen}" class="prod-img">` : ''}
             <span class="badge">País: ${item.pais}</span><br>
             <strong>${item.nombre}</strong><br>
             <span>Precio: <b>$${item.precio} USD</b> | Stock: <b>${item.stock}</b></span><br>
@@ -327,7 +355,6 @@ Comisión de la app ($2 USD) destinada a: ${CORREO_AIRTM_PLATAFORMA}
       const lista = document.getElementById("buyer-catalog-list");
       lista.innerHTML = "";
 
-      // Filtrar productos por el país del comprador
       const productosDelPais = productos.filter(p => p.pais === usuarioActual.pais);
 
       if (productosDelPais.length === 0) {
@@ -338,12 +365,13 @@ Comisión de la app ($2 USD) destinada a: ${CORREO_AIRTM_PLATAFORMA}
       productosDelPais.forEach(item => {
         lista.innerHTML += `
           <div class="card card-buyer">
+            ${item.imagen ? `<img src="${item.imagen}" class="prod-img">` : ''}
             <span class="badge">Vendedor: ${item.vendedor} (${item.pais})</span><br>
             <strong style="font-size: 18px;">${item.nombre}</strong><br>
             <span style="font-size: 16px; color:#1a73e8; font-weight:bold;">Precio: $${item.precio} USD</span><br>
             <small>Disponible: ${item.stock} unidades</small><br>
             
-            <button class="btn btn-pay" onclick="procesarUnicoPago(${item.id})" ${item.stock <= 0 ? 'disabled' : ''}>
+            <button class="btn btn-pay" onclick="procesarUnicoPago('${item.id}')" ${item.stock <= 0 ? 'disabled' : ''}>
               ${item.stock > 0 ? '💳 Pagar $ ' + item.precio + ' USD' : 'Agotado'}
             </button>
           </div>
